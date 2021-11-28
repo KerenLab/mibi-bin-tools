@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import skimage.io as io
 import collections
-from sympy import symbols, solve , Eq
+#from sympy import symbols, solve , Eq
 
 from mibi_bin_tools import io_utils, _extract_bin
 
@@ -43,36 +43,78 @@ def write_out(img_data, intensity_data, intens_width_data, out_dir, fov_name, ta
             io.imsave(os.path.join(int_out, f'{target}_intensity.tiff'), intensity_data[:, :, i], plugin='tifffile', check_contrast=False)
             io.imsave(os.path.join(int_width_out, f'{target}_int_width.tiff'), intens_width_data[:, :, i], plugin='tifffile', check_contrast=False)
             
-def write_out_spectra(pd, out_dir, fov_name):
+def write_out_spectra(df_spectra, out_dir, fov_name):
+    '''Saves formatted pandas dataframe as csv to output folder
+    
+    Args: 
+        df_spectra (pd.DataFrame)
+            count spectra
+        out_dir (string)
+            path to output directory
+        fov_name (string)
+    '''
     final_out = os.path.join(out_dir, 'spectrum_files')
     if not os.path.exists(final_out):
         os.makedirs(final_out)
-    pd.to_csv(os.path.join(final_out, f'{fov_name}_spectrum.csv'))
+    df_spectra.to_csv(os.path.join(final_out, f'{fov_name}_spectrum.csv'))
 
-def get_spectra_df(TimeOffset):
-    data = collections.Counter(TimeOffset)
-    df = pd.DataFrame(list(zip(data.keys(), data.values())), columns =['TimeOffset', 'Counts'])
-    df = df.sort_values(by=['TimeOffset'])
+def get_spectra_df(time_offset):
+     """Creates formatted pandas dataframe from spectra data
+
+    Args:
+        time_offset (list):
+            TOF values extracted from bin file
+    Returns:
+        pd.DataFrame:
+            count spectra
+    """
+    data = collections.Counter(time_offset)
+    df = pd.DataFrame(list(zip(data.keys(), data.values())), columns =['time_offset', 'Counts'])
+    df = df.sort_values(by=['time_offset'])
 
     ##add padded array where TOFs are empty
-    timePadded = np.arange(0 , np.max(df['TimeOffset']) + 1 , 1)
-    df_padded = pd.DataFrame(data= timePadded , columns =['TimeOffset'])
-    df_padded = df_padded.merge(df, how='left', on='TimeOffset')
+    timePadded = np.arange(0 , np.max(df['time_offset']) + 1 , 1)
+    df_padded = pd.DataFrame(data= timePadded , columns =['time_offset'])
+    df_padded = df_padded.merge(df, how='left', on='time_offset')
     df_padded.loc[df_padded.Counts.isna() , 'Counts'] = 0
     
     return df_padded 
 
-def calibrate_spectrum(t1 , m1 , t2 , m2 , time_res: float=500e-6):
-    a, b = symbols('a b')
-    eq1 = Eq((((t1 * time_res - b)/a) ** 2 - m1) , 0)
-    eq2 = Eq((((t2 * time_res - b)/a) ** 2 - m2) , 0)
-    sol = solve((eq1 , eq2) , (a , b))
-    #get the negative mass_offset (???)
-    ind = [i for i in range(len(sol)) if sol[i][1] < 0 and sol[i][0] > 0 ]
-    mass_offset = sol[ind[0]][1]
-    mass_gain = sol[ind[0]][0]
-    return mass_offset , mass_gain
-        
+# def calibrate_spectrum(t1 , m1 , t2 , m2 , time_res: float=500e-6):
+#     a, b = symbols('a b')
+#     eq1 = Eq((((t1 * time_res - b)/a) ** 2 - m1) , 0)
+#     eq2 = Eq((((t2 * time_res - b)/a) ** 2 - m2) , 0)
+#     sol = solve((eq1 , eq2) , (a , b))
+#     #get the negative mass_offset (???)
+#     ind = [i for i in range(len(sol)) if sol[i][1] < 0 and sol[i][0] > 0 ]
+#     mass_offset = sol[ind[0]][1]
+#     mass_gain = sol[ind[0]][0]
+#     return mass_offset , mass_gain
+
+def calibrate_spectrum(t1 , m1 , t2 , m2 , mass_gain , mass_offset, time_res: float=500e-6):
+    '''Calibrate spectrum by pairs of time and mass
+    Args:
+        m1 , m2 (float)
+            known masses values used to calibrate spectrum
+        t1, t2 (float)
+            values taken from raw spectrum which correspond to m1,m2 
+        mass_gain , mass_offset (float)
+            current calibration parameters taken from json file
+        time_res (float)
+            The default is 500e-6.
+    Returns:
+        float
+            new mass offset parameter
+        float
+            new mass gain parameter
+    '''
+    sign1 =  np.array([1 , 1 , -1 , -1])
+    sign2 =  np.array([1 , -1 , 1 , -1])
+    a = (t1 - t2) * time_res / (sign1 * np.sqrt(m1) + sign2 * np.sqrt(m2))
+    b = (sign1 * np.sqrt(m2) * t1 + sign2 * np.sqrt(m1) * t2) * time_res / (sign1 * np.sqrt(m2) + sign2 * np.sqrt(m1))
+    idx = np.argmin((a - mass_gain) ** 2 + (b - mass_offset) ** 2)
+    return b[idx] , a[idx]
+       
 def extract_bin_files(data_dir: str, out_dir: str,
                       include_fovs: Union[List[str], None] = None,
                       panel: Union[Tuple[float, float], pd.DataFrame] = (-0.3, 0.0),
@@ -101,9 +143,6 @@ def extract_bin_files(data_dir: str, out_dir: str,
     for fov in fov_files.values():
         with open(os.path.join(data_dir, fov['json']), 'rb') as f:
             data = json.load(f)
-
-        fov['mass_gain'] = data['fov']['fullTiming']['massCalibration']['massGain']
-        fov['mass_offset'] = data['fov']['fullTiming']['massCalibration']['massOffset']
 
         if type(calibration) is tuple:
             fov['mass_gain'] = calibration[1]
@@ -235,9 +274,6 @@ def extract_spectra(data_dir: str, out_dir: str,
         with open(os.path.join(data_dir, fov['json']), 'rb') as f:
             data = json.load(f)
 
-        fov['mass_gain'] = data['fov']['fullTiming']['massCalibration']['massGain']
-        fov['mass_offset'] = data['fov']['fullTiming']['massCalibration']['massOffset']
-
         if type(calibration) is tuple:
             fov['mass_gain'] = calibration[1]
             fov['mass_offset'] = calibration[0]
@@ -284,7 +320,7 @@ def extract_spectra(data_dir: str, out_dir: str,
             )
             #build spectra from pulses list    
             df_spectra = get_spectra_df(spectra_data)
-            df_spectra['massList'] = pd.Series(tof2mass(df_spectra['TimeOffset'].to_numpy(), fov['mass_offset'], fov['mass_gain'], time_res))
+            df_spectra['massList'] = pd.Series(tof2mass(df_spectra['time_offset'].to_numpy(), fov['mass_offset'], fov['mass_gain'], time_res))
             #save to spectra.csv
             pool.apply_async(
                 write_out_spectra, 
