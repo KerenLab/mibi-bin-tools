@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import skimage.io as io
 import collections
-#from sympy import symbols, solve , Eq
 
 from mibi_bin_tools import io_utils, _extract_bin
 
@@ -59,7 +58,7 @@ def write_out_spectra(df_spectra, out_dir, fov_name):
     df_spectra.to_csv(os.path.join(final_out, f'{fov_name}_spectrum.csv'))
 
 def get_spectra_df(time_offset):
-     """Creates formatted pandas dataframe from spectra data
+    """Creates formatted pandas dataframe from spectra data
 
     Args:
         time_offset (list):
@@ -79,17 +78,6 @@ def get_spectra_df(time_offset):
     df_padded.loc[df_padded.Counts.isna() , 'Counts'] = 0
     
     return df_padded 
-
-# def calibrate_spectrum(t1 , m1 , t2 , m2 , time_res: float=500e-6):
-#     a, b = symbols('a b')
-#     eq1 = Eq((((t1 * time_res - b)/a) ** 2 - m1) , 0)
-#     eq2 = Eq((((t2 * time_res - b)/a) ** 2 - m2) , 0)
-#     sol = solve((eq1 , eq2) , (a , b))
-#     #get the negative mass_offset (???)
-#     ind = [i for i in range(len(sol)) if sol[i][1] < 0 and sol[i][0] > 0 ]
-#     mass_offset = sol[ind[0]][1]
-#     mass_gain = sol[ind[0]][0]
-#     return mass_offset , mass_gain
 
 def calibrate_spectrum(t1 , m1 , t2 , m2 , mass_gain , mass_offset, time_res: float=500e-6):
     '''Calibrate spectrum by pairs of time and mass
