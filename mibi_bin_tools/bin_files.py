@@ -28,7 +28,7 @@ def _set_tof_ranges(fov: Dict[str, Any], higher: np.ndarray, lower: np.ndarray, 
             ).astype(np.uint16)
 
 def write_out(img_data, intensity_data, intens_width_data, out_dir, fov_name, targets):
-    final_out = os.path.join(out_dir, fov_name)
+    final_out = os.path.join(out_dir, fov_name , 'TIFs')
     int_out = os.path.join(final_out, 'intensities')
     int_width_out = os.path.join(final_out, 'intensity_times_width')
     os.makedirs(final_out)
