@@ -32,7 +32,7 @@ def write_out(img_data, intensity_data, intens_width_data, out_dir, fov_name, ta
     int_out = os.path.join(final_out, 'intensities')
     int_width_out = os.path.join(final_out, 'intensity_times_width')
     os.makedirs(final_out)
-    if not os.path.exists(int_out):
+    if not os.path.exists(int_out) and np.max(intensity_data) != 0 :
         os.makedirs(int_out)
         os.makedirs(int_width_out)
 
@@ -141,14 +141,16 @@ def extract_bin_files(data_dir: str, out_dir: str,
             
         if type(panel) is tuple:
             rows = data['fov']['panel']['conjugates']
-            fov['masses'], fov['targets'] = zip(*[(el['mass'], el['target']) for el in rows])
-
+            fov['masses'], fov['targets'] = zip(*sorted([(el['mass'], el['target']) for el in rows]))
+            
             masses_arr = np.array(fov['masses'])
             _set_tof_ranges(fov, masses_arr + panel[1], masses_arr + panel[0], time_res)
         else:
+            #sort masses (necessarywhen staining in batch)
             fov['masses'] = panel['Mass']
-            fov['targets'] = panel['Target']
-
+            fov['targets'] = [panel['Target'][i] for i in np.argsort(fov['masses'])]
+            fov['masses'] = sorted(fov['masses'])
+            
             _set_tof_ranges(fov, panel['Stop'].values, panel['Start'].values, time_res)
 
         if type(intensities) is list:
@@ -161,13 +163,13 @@ def extract_bin_files(data_dir: str, out_dir: str,
             fov['calc_intensity'] = [target in fov['intensities'] for target in fov['targets']]
         else:
             fov['calc_intensity'] = [False,] * len(fov['targets'])
-
+        
+        fov['name_to_save'] = data['runName']  + '_'+ data['fovId'] + '_' + data['fovName'] 
     # start download of bin files to new tmp dir
     bin_file_paths = [os.path.join(data_dir, fov['bin']) for fov in fov_files.values()]
     bin_file_sizes = [os.path.getsize(bfp) for bfp in bin_file_paths]
     bin_files = \
         [(fov, os.path.join(data_dir, fov['bin'])) for fov in fov_files.values()]
-
     with mp.Pool() as pool:
         for i, (fov, bf) in enumerate(bin_files):
             # call extraction cython here
@@ -179,7 +181,7 @@ def extract_bin_files(data_dir: str, out_dir: str,
             pool.apply_async(
                 write_out, 
                 (img_data[0, :, :, :], img_data[1, :, :, :], img_data[2, :, :, :], out_dir,
-                 fov['bin'][:-4], fov['targets']
+                 fov['name_to_save'], fov['targets']
                 )
             )
         pool.close()
@@ -272,13 +274,13 @@ def extract_spectra(data_dir: str, out_dir: str,
         if type(panel) is tuple:
             rows = data['fov']['panel']['conjugates']
             fov['masses'], fov['targets'] = zip(*[(el['mass'], el['target']) for el in rows])
-
+            
             masses_arr = np.array(fov['masses'])
             _set_tof_ranges(fov, masses_arr + panel[1], masses_arr + panel[0], time_res)
         else:
             fov['masses'] = panel['Mass']
             fov['targets'] = panel['Target']
-
+            
             _set_tof_ranges(fov, panel['Stop'].values, panel['Start'].values, time_res)
 
         if type(intensities) is list:

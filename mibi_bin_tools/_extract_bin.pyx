@@ -206,15 +206,15 @@ cdef INT_t[:, :, :, :] _extract_bin(const char* filename, MAXINDEX_t filesize,
                 if idx > 0:
                     if time <= high_range[idx - 1]:
                         img_data_view[0, pix, idx - 1] += 1
-                        #if calc_intensity[idx - 1]:
-                        img_data_view[1, pix, idx - 1] += intensity
-                        img_data_view[2, pix, idx - 1] += intensity * width
+                        if calc_intensity[idx - 1]:
+                            img_data_view[1, pix, idx - 1] += intensity
+                            img_data_view[2, pix, idx - 1] += intensity * width
                 elif idx == -1:
                     if time <= high_range[low_range.shape[0] - 1]:
                         img_data_view[0, pix, low_range.shape[0] - 1] += 1
-                        #if calc_intensity[low_range.shape[0] - 1]:
-                        img_data_view[1, pix, low_range.shape[0] - 1] += intensity
-                        img_data_view[2, pix, low_range.shape[0] - 1] += intensity * width
+                        if calc_intensity[low_range.shape[0] - 1]:
+                            img_data_view[1, pix, low_range.shape[0] - 1] += intensity
+                            img_data_view[2, pix, low_range.shape[0] - 1] += intensity * width
     fclose(fp)
     free(file_buffer)
 
