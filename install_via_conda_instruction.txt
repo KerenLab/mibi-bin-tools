@@ -7,14 +7,13 @@ For a step-by-step guide of how to install Anaconda, please refer to these links
  
 Clone the repository from GitHub
 1.     Open your terminal and navigate to your local folder where the project will be installed.
-2.     Run “git clone https://github.com/azulaynofar/mibi-bin-tools”
+2.     Run “git clone https://github.com/KerenLab/mibi-bin-tools.git”
 3.     Run “cd mibi-bin-tools”
-4.     Run “git checkout develop”
  
 Create conda environment and install dependencies
 1.     Run “conda create –name “mibi-env” python=3.6”
 2.     Run “conda activate mibi-env”
-3.     Run “pip install -r requirments.txt”
+3.     Run “pip install -r requirements.txt”
 4.     Run “pip install -r docker-requirements.txt”
  
 Compile files within project
