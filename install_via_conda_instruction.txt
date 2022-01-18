@@ -1,0 +1,30 @@
+Setting up mibi-bin-tool
+ 
+Installing Anaconda
+For a step-by-step guide of how to install Anaconda, please refer to these links:
+·      https://docs.anaconda.com/anaconda/install/mac-os/ for Mac users
+·      https://docs.anaconda.com/anaconda/install/windows/ for Windows users
+ 
+Clone the repository from GitHub
+1.     Open your terminal and navigate to your local folder where the project will be installed.
+2.     Run “git clone https://github.com/azulaynofar/mibi-bin-tools”
+3.     Run “cd mibi-bin-tools”
+4.     Run “git checkout develop”
+ 
+Create conda environment and install dependencies
+1.     Run “conda create –name “mibi-env” python=3.6”
+2.     Run “conda activate mibi-env”
+3.     Run “pip install -r requirments.txt”
+4.     Run “pip install -r docker-requirements.txt”
+ 
+Compile files within project
+Run “python -m pip install -e .”
+ 
+Open the jupyter notebook to extract your bin files
+1.     Run “jupyter notebook”
+2.     Click templates -> bin_file_extractor.ipynb
+ 
+To use mibi-bin-tools after set-up
+1.     Open your terminal and navigate to your local mibi-bin-tools folder by “cd path_to_folder "
+2.     Run “jupyter notebook”
+3.     Click templates -> bin_file_extractor.ipynb
