@@ -31,7 +31,8 @@ def write_out(img_data, intensity_data, intens_width_data, out_dir, fov_name, ta
     final_out = os.path.join(out_dir, fov_name , 'TIFs')
     int_out = os.path.join(final_out, 'intensities')
     int_width_out = os.path.join(final_out, 'intensity_times_width')
-    os.makedirs(final_out)
+    if not os.path.exists(final_out):
+        os.makedirs(final_out)
     if not os.path.exists(int_out) and np.max(intensity_data) != 0 :
         os.makedirs(int_out)
         os.makedirs(int_width_out)
@@ -115,7 +116,7 @@ def extract_bin_files(data_dir: str, out_dir: str,
     json_files = io_utils.list_files(data_dir, substrs=['.json'])
 
     fov_names = io_utils.extract_delimited_names(bin_files, delimiter='.')
-
+    
     fov_files = {
         fov_name: {
             'bin': fov_name + '.bin',
@@ -178,15 +179,17 @@ def extract_bin_files(data_dir: str, out_dir: str,
                 fov['upper_tof_range'], np.array(fov['calc_intensity'], dtype=np.uint8),
                 timeout=timeout
             )
-            pool.apply_async(
-                write_out, 
-                (img_data[0, :, :, :], img_data[1, :, :, :], img_data[2, :, :, :], out_dir,
-                 fov['name_to_save'], fov['targets']
-                )
-            )
+            # pool.apply_async(
+            #     write_out, 
+            #     (img_data[0, :, :, :], img_data[1, :, :, :], img_data[2, :, :, :], out_dir,
+            #      fov['name_to_save'], fov['targets']
+            #     )
+            # )
+            write_out(img_data[0, :, :, :], img_data[1, :, :, :], img_data[2, :, :, :],
+                      out_dir, fov['name_to_save'], fov['targets'])
         pool.close()
         pool.join()
-
+        
 def extract_no_sum(data_dir, out_dir, fov, channel, mass_range=(-0.3, 0.0), time_res: float=500e-6):
     bin_files = io_utils.list_files(data_dir, substrs=['.bin'])
     json_files = io_utils.list_files(data_dir, substrs=['.json'])
